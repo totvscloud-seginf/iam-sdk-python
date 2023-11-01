@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "iam-authn-sdk-python"
+version = "0.1.0"
+description = "SDK for IAM AuthN"
+authors = []
+readme = "README.md"
+packages = [{include = "iam_authn_sdk_python"}]
+
+[tool.poetry.dependencies]
+python = "3.9"
+requests = "^2.31.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
