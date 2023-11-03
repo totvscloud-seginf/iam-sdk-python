@@ -1,5 +1,5 @@
 import logging
-from .client import Client
+from .api import Client
 
 
 def client(*args, **kargs):
@@ -13,4 +13,4 @@ class NullHandler(logging.Handler):
         pass
 
 
-logging.getLogger("boto3").addHandler(NullHandler())
+logging.getLogger("iam_authn_sdk_python").addHandler(NullHandler())
