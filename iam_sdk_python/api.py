@@ -8,6 +8,7 @@ from .exceptions import (
     InvalidRequestError,
     NotAuthorizedException,
 )
+from .context import ContextCallerForward
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class Client:
         """
         Authenticate user
         """
-        url = f"{self.config.get_endpoint()}/login"
+        url = f"{self.config.get_endpoint_authn()}/login"
 
         form = {
             "username": self._api_access_key,
@@ -77,7 +78,7 @@ class Client:
 
         If the user does not have the permission, raises NotAuthorizedException
         """
-        url = f"{self.config.get_endpoint()}/login/assumerole"
+        url = f"{self.config.get_endpoint_authn()}/login/assumerole"
 
         form = {
             "role": role_name,
@@ -109,7 +110,7 @@ class Client:
         """
         Get roles authorized to assume role.
         """
-        url = f"{self.config.get_endpoint()}/me/roles"
+        url = f"{self.config.get_endpoint_authn()}/me/roles"
 
         logger.info("requesting user roles")
 
@@ -131,7 +132,7 @@ class Client:
 
         Returns the claims of token
         """
-        url = f"{self.config.get_endpoint()}/oauth2/introspection"
+        url = f"{self.config.get_endpoint_authn()}/token/validate"
 
         logger.debug("requesting validate token")
 
@@ -141,7 +142,54 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        return self._validate_api_response("introspection", resp)["data"]
+        return self._validate_api_response("token_validate", resp)["data"]
+
+    def is_authorized_to_call_action(
+        self,
+        caller: ContextCallerForward,
+        action: str,
+        resource: str,
+        additional_context: Dict[str, Any] = {},
+    ) -> bool:
+        """
+        Request if the caller making the request, is authorized.
+
+        :param caller: the required headers to forward
+        :param action: the permission to check the action
+        :resource: which resource it is been requested
+        :additional_context: optional parameters to validate the permission, for example mfa enabled, region
+        """
+        url = f"{self.config.get_endpoint_authz()}/is_authorized"
+        headers = {
+            "Authorization": f"Bearer {self._token}",
+        }
+        payload = {
+            "action": action,
+            "resource": resource,
+        }
+
+        if additional_context:
+            payload["context"] = additional_context
+
+        logger.debug("requesting validate token")
+
+        logger.debug("validating the context parameters")
+        caller.validate()
+
+        headers_forward = caller.mount_header()
+
+        # merge headers
+        headers = {**headers, **headers_forward}
+
+        resp = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            verify=self._validate_ssl,
+        )
+
+        response = self._validate_api_response("token_validate", resp)
+        return response["decision"] == "Allow"
 
     def _validate_api_response(
         self, api_name: str, resp: requests.Response

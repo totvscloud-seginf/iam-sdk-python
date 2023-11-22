@@ -13,4 +13,4 @@ class NullHandler(logging.Handler):
         pass
 
 
-logging.getLogger("iam_authn_sdk_python").addHandler(NullHandler())
+logging.getLogger("iam_sdk_python").addHandler(NullHandler())

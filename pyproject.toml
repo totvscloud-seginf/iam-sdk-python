@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "iam-authn-sdk-python"
+name = "iam-sdk-python"
 version = "0.1.0"
-description = "SDK for IAM AuthN"
+description = "SDK for IAM "
 authors = []
 readme = "README.md"
-packages = [{include = "iam_authn_sdk_python"}]
+packages = [{include = "iam_sdk_python"}]
 
 [tool.poetry.dependencies]
 python = "3.9"
