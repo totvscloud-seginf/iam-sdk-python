@@ -36,19 +36,18 @@ class Client:
         api_access_key=None,
         api_secret_key=None,
         validate_ssl=True,
-        region=None,
-        service=None,
     ):
         self._api_access_key = api_access_key
         self._api_secret_key = api_secret_key
         self._validate_ssl = validate_ssl
-        self._region = region
-        self._service = service
         return self
 
-    def login(self):
+    def login(self, region="", service=""):
         """
         Authenticate user
+
+        :param region: which region to set scope for this session
+        :param service: which service to set scope for this session
         """
         url = f"{self.config.get_endpoint_authn()}/login"
 
@@ -56,12 +55,15 @@ class Client:
             "username": self._api_access_key,
             "password": self._api_secret_key,
         }
-        if self._service:
-            form["service"] = self._service
-        if self._region:
-            form["region"] = self._region
+        if service:
+            form["service"] = service
+        if region:
+            form["region"] = region
 
         resp = requests.post(url, json=form, verify=self._validate_ssl)
+
+        logger.debug("Header response: %s", resp.headers)
+        logger.debug("Body response: %s", resp.text)
 
         data = self._validate_api_response("login", resp)["data"]
 
@@ -70,13 +72,18 @@ class Client:
 
         return self
 
-    def assume_role(self, role_name="", tenant=""):
+    def assume_role(self, role_name="", tenant="", service="", region=""):
         """
         Assume one role, which the user is authorized to use it.
 
         The user must be authenticated first to assume role.
 
         If the user does not have the permission, raises NotAuthorizedException
+
+        :param role_name: which role to use
+        :param tenant: which tenant this role is from
+        :param region: which region to set scope for this session
+        :param service: which service to set scope for this session
         """
         url = f"{self.config.get_endpoint_authn()}/login/assumerole"
 
@@ -85,10 +92,10 @@ class Client:
             "tenant": tenant,
         }
 
-        if self._service:
-            form["service"] = self._service
-        if self._region:
-            form["region"] = self._region
+        if service:
+            form["service"] = service
+        if region:
+            form["region"] = region
 
         logger.debug("requesting assume role")
 
@@ -171,15 +178,15 @@ class Client:
         if additional_context:
             payload["context"] = additional_context
 
-        logger.debug("requesting validate token")
-
         logger.debug("validating the context parameters")
         caller.validate()
-
         headers_forward = caller.mount_header()
 
         # merge headers
         headers = {**headers, **headers_forward}
+
+        logger.debug("Request headers: %s", headers)
+        logger.debug("Request body: %s", payload)
 
         resp = requests.post(
             url,
@@ -188,7 +195,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
+        logger.debug("Header response: %s", resp.headers)
+        logger.debug("Body response: %s", resp.text)
+
         response = self._validate_api_response("token_validate", resp)
+
         return response["decision"] == "Allow"
 
     def _validate_api_response(
@@ -202,7 +213,7 @@ class Client:
         :param api_name: the endpoint been validated
         :param resp: the requests.Response
         """
-        logger.debug("validate %s response", api_name)
+        logger.debug('validate "%s" response', api_name)
 
         api_status_code = resp.status_code
         api_response_text = resp.text

@@ -12,12 +12,19 @@ class ContextCallerForward:
     :param caller_resource_tenant:
     """
 
-    def __init__(self, **kargs) -> None:
-        self._caller_token_jwt = kargs.get("caller_token_jwt", "")
-        self._caller_source_ip = kargs.get("caller_source_ip", "")
-        self._caller_user_agent = kargs.get("caller_user_agent", "")
-        self._caller_referer = kargs.get("caller_referer", "")
-        self._caller_resource_tenant = kargs.get("caller_resource_tenant", "")
+    def __init__(
+        self,
+        caller_token_jwt="",
+        caller_source_ip="",
+        caller_user_agent="",
+        caller_referer="",
+        caller_resource_tenant="",
+    ) -> None:
+        self._caller_token_jwt = caller_token_jwt
+        self._caller_source_ip = caller_source_ip
+        self._caller_user_agent = caller_user_agent
+        self._caller_referer = caller_referer
+        self._caller_resource_tenant = caller_resource_tenant
 
     @property
     def caller_token_jwt(self):

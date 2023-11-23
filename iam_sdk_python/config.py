@@ -1,15 +1,16 @@
 import os
 
-DEFAULT_ENDPOINT = "http://localhost:9000/api"
+AUTHN_ENDPOINT = "http://localhost:9000/api"
+AUTHZ_ENDPOINT = "http://localhost:8180/v1"
 
 
 class Config:
     def __init__(self, **kargs) -> None:
         self.endpoint_authn = kargs.get(
-            "endpoint", os.getenv("IAM_AUTHN_ENDPOINT", DEFAULT_ENDPOINT)
+            "endpoint_authn", os.getenv("IAM_AUTHN_ENDPOINT", AUTHN_ENDPOINT)
         )
         self.endpoint_authz = kargs.get(
-            "endpoint", os.getenv("IAM_AUTHZ_ENDPOINT", DEFAULT_ENDPOINT)
+            "endpoint_authz", os.getenv("IAM_AUTHZ_ENDPOINT", AUTHZ_ENDPOINT)
         )
 
     def get_endpoint_authn(self):
