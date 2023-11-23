@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "SDK for IAM "
 authors = []
 readme = "README.md"
-packages = [{include = "iam_sdk_python"}]
+packages = [{include = "iam_sdk"}]
 
 [tool.poetry.dependencies]
 python = "3.9"

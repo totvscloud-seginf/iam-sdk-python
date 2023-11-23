@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 from tests.patches import api as patch_api
 
-import iam_sdk_python
-from iam_sdk_python.context import ContextCallerForward
+import iam_sdk
+from iam_sdk.context import ContextCallerForward
 
 # import logging
 # logging.basicConfig()
@@ -15,7 +15,7 @@ from iam_sdk_python.context import ContextCallerForward
 class TestApi(unittest.TestCase):
     def test_valid_client_parameters(self):
         try:
-            _ = iam_sdk_python.client(
+            _ = iam_sdk.client(
                 endpoint_authn="http://123:80",
                 endpoint_authz="http://123:80",
                 api_access_key="a",
@@ -23,19 +23,19 @@ class TestApi(unittest.TestCase):
                 validate_ssl=False,
             )
 
-            _ = iam_sdk_python.client()
+            _ = iam_sdk.client()
 
-            _ = iam_sdk_python.Client().client()
+            _ = iam_sdk.Client().client()
 
         except Exception:
             self.fail(
                 f"client() got exception when testing parameters: {traceback.format_exc()}"
             )
 
-    @patch("iam_sdk_python.api.requests.get", patch_api.mock_get)
-    @patch("iam_sdk_python.api.requests.post", patch_api.mock_post)
+    @patch("iam_sdk.api.requests.get", patch_api.mock_get)
+    @patch("iam_sdk.api.requests.post", patch_api.mock_post)
     def test_get_roles(self):
-        client = iam_sdk_python.client()
+        client = iam_sdk.client()
 
         try:
             roles = client.list_my_roles()
@@ -43,21 +43,21 @@ class TestApi(unittest.TestCase):
         except Exception:
             self.fail(f"list_my_roles() got exception: {traceback.format_exc()}")
 
-    @patch("iam_sdk_python.api.requests.get", patch_api.mock_get)
+    @patch("iam_sdk.api.requests.get", patch_api.mock_get)
     def test_validate_token(self):
         try:
-            _ = iam_sdk_python.client().validate_token()
+            _ = iam_sdk.client().validate_token()
         except Exception:
             self.fail(f"validate_token() got exception: {traceback.format_exc()}")
 
-    @patch("iam_sdk_python.api.requests.get", patch_api.mock_get_invalid_token)
+    @patch("iam_sdk.api.requests.get", patch_api.mock_get_invalid_token)
     def test_validate_token_invalid(self):
-        with self.assertRaises(iam_sdk_python.exceptions.TokenInvalidError):
-            _ = iam_sdk_python.client().validate_token()
+        with self.assertRaises(iam_sdk.exceptions.TokenInvalidError):
+            _ = iam_sdk.client().validate_token()
 
-    @patch("iam_sdk_python.api.requests.post", patch_api.mock_post)
+    @patch("iam_sdk.api.requests.post", patch_api.mock_post)
     def test_login(self):
-        client = iam_sdk_python.client(
+        client = iam_sdk.client(
             api_access_key="user",
             api_secret_key="password",
         )
@@ -67,19 +67,19 @@ class TestApi(unittest.TestCase):
         except Exception:
             self.fail(f"login() got exception: {traceback.format_exc()}")
 
-    @patch("iam_sdk_python.api.requests.post", patch_api.mock_post_login_invalid)
+    @patch("iam_sdk.api.requests.post", patch_api.mock_post_login_invalid)
     def test_login_invalid_credentials(self):
-        client = iam_sdk_python.client(
+        client = iam_sdk.client(
             api_access_key="user",
             api_secret_key="invalid",
         )
 
-        with self.assertRaises(iam_sdk_python.exceptions.InvalidRequestError):
+        with self.assertRaises(iam_sdk.exceptions.InvalidRequestError):
             _ = client.login()
 
-    @patch("iam_sdk_python.api.requests.post", patch_api.mock_post_assumerole)
+    @patch("iam_sdk.api.requests.post", patch_api.mock_post_assumerole)
     def test_assume_role(self):
-        client = iam_sdk_python.client(
+        client = iam_sdk.client(
             api_access_key="user", api_secret_key="password"
         ).login()
 
@@ -91,21 +91,21 @@ class TestApi(unittest.TestCase):
         except Exception:
             self.fail(f"assume_role() got exception: {traceback.format_exc()}")
 
-    @patch("iam_sdk_python.api.requests.post", patch_api.mock_post_assumerole_forbidden)
+    @patch("iam_sdk.api.requests.post", patch_api.mock_post_assumerole_forbidden)
     def test_assume_role_forbidden(self):
-        client = iam_sdk_python.client(
+        client = iam_sdk.client(
             api_access_key="user", api_secret_key="password"
         ).login()
 
-        with self.assertRaises(iam_sdk_python.exceptions.NotAuthorizedException):
+        with self.assertRaises(iam_sdk.exceptions.NotAuthorizedException):
             _ = client.assume_role(
                 role_name="role",
                 tenant="test",
             )
 
-    @patch("iam_sdk_python.api.requests.post", patch_api.mock_post)
+    @patch("iam_sdk.api.requests.post", patch_api.mock_post)
     def test_is_authorized(self):
-        client = iam_sdk_python.client()
+        client = iam_sdk.client()
 
         caller_context = ContextCallerForward(
             caller_token_jwt="eyJhbGciOiJIUzI1NiIsImtpZCI6IjgzN2IxZDU5LTRiZTktNDg1OS1iNzhlLTMxNWY4OTAwMWNmMCIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJleHAiOjE2OTI3MjkxMjYsImV4dCI6eyJwcmluY2lwYWwiOiJ0Y2xvdWQ6OnRlbmFudDo6Q0NPREUwOjpyb2xlOjpcInJvbGVfcml2YXNhbmRyZVwiIiwicmVnaW9uIjoidGVzcDIiLCJzZXJ2aWNlIjoicm9kanVsIiwidGVuYW50IjoiQ0NPREUwIiwidXNlcl9pZCI6IjI4NTc3NzM0LWZyMTktNGM2NS05ODg3LWM1YjY2NjM0NjlkMyIsInVzZXJuYW1lIjoidXNlcmFwaSIsIm1mYSI6ImFjdGl2ZSJ9LCJpYXQiOjE2OTI3MjU1MjYsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6NDQ0NCIsImp0aSI6IjI2MzFhYjRhLTc1ZTgtNDUwOS1iOGRhLTBlZTJkMTRiNzM0OCIsIm5iZiI6MTY5MjcyNTUyNiwicmVnaW9uIjoidGVzcDIiLCJzY3AiOltdLCJzZXJ2aWNlIjoicmVzdHJpY3Rpb25zIiwic3ViIjoiM2FkZWVlODItZjFjNy00MzJiLTg0MjQtYzhlYjFkNzQ1NTNlIn0.x5sSsBcxYNMEClAcJIFngdkZRY6H-v8Dt72Vn1pI2Uc",
@@ -132,7 +132,7 @@ class TestApi(unittest.TestCase):
             )
 
     def test_caller_context_requirement_for_is_authorized(self):
-        client = iam_sdk_python.client()
+        client = iam_sdk.client()
 
         caller_context = ContextCallerForward()
 
