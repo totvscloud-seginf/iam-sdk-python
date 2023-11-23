@@ -185,10 +185,12 @@ class Client:
         payload = {
             "action": action,
             "resource": resource,
+            "context": additional_context,
         }
 
-        if additional_context:
-            payload["context"] = additional_context
+        # parameter "requestedRegion" is required
+        if payload["context"].get("requestedRegion") is None:
+            payload["context"]["requestedRegion"] = ""
 
         logger.debug("validating the context parameters")
         caller.validate()
