@@ -2,6 +2,9 @@
 
 ## Using the SDK
 
+
+### Login
+
 ```python
 import logging
 import iam_sdk_python
@@ -27,6 +30,12 @@ DEBUG:iam_sdk_python.api:validate login response
 eyJhbGciOiJSUzI1NiIsImtpZCI6IjkyZDA0ZTk4LTgxMTEtNGZkMi04M2IxLTNiNThkYTI1NDhjNyIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiI1M2ExNDE3Yi01NjI1LTQ3YTEtOTcxNy1hMjhhNDcwYmIxNDkiLCJleHAiOjE2OTkwMjc4OTIsImV4dCI6eyJtZmEiOiJ1bmtub3duIiwicHJpbmNpcGFsIjoidHJuOjp0Y2xvdWQ6OmlhbTo6Ojpjc2VpbmY6OnVzZXI6OlwidXNlcmFwaTJcIiIsInRlbmFudCI6ImNzZWluZiIsInVzZXJfaWQiOiJkNGUxNzkxOC01YzAzLTRlNTYtYmJlNy01YTVkNDBkOWU3MjQiLCJ1c2VybmFtZSI6InVzZXJhcGkyIn0sImlhdCI6MTY5OTAyNDI5MiwiaXNzIjoiaHR0cDovLzEyNy4wLjAuMTo0NDQ0IiwianRpIjoiNjFhOGQzMzktOTk4OS00ODRjLWFkM2QtMWM1ZWZhYTRhZjAxIiwibmJmIjoxNjk5MDI0MjkyLCJzY3AiOltdLCJzdWIiOiI1M2ExNDE3Yi01NjI1LTQ3YTEtOTcxNy1hMjhhNDcwYmIxNDkifQ.kxRzNYxxlrCDCxlFzPpmRF_V0bHXRfo1SSNy520MGYGOhvzIQzqVyPLPliVv3MFGvHVwGOstGBgXaIGhGMnuPCYHU6Xv5BYjlpF4qa4KvaamuEV4v0JOjIzZ0b5gDE0GrG4dit_INnwxDr8D1fCKk_UOdUy6-1jXktbbSvIIrxlKpfI3E2GqfrCx7zMVSyCPf7OrlHvYOCMKYF1FFSjxlkcvT2kc4UIL1W_MUi4Egd9kT1Rwygy4f0JSMtD2oQ_DtDQTyvKOMrF-mHgN4VhuQOHNuS8b1xxItNacFQO-ktTpDG3flLJLQypCMqmbRiQrwX5vlxw0xrysKdhy7BGu0Yj25IoDH1TbnaQWwZpxtaeChf3DsEsr2qRIn_9Ygn_wnNiSoiqtlgZqRjxgQLck6JUV1U1fw3GclbUmQi3QzxBkWrk-t4hkjzYbVJNhNZT5dNrUKPcvCQPX2KMykB4mXTPY9sUMGJxXFmM07DqmGrdfStZQ1POStloUekydcjbrDm7wSjQUmvJegXkoiPsYJaLJgDwgvCpQSlco0fxd3l23ixLB_ZpZJtzlCaQntqeqydhUOM2ESP7uczfi9Je1XJT3j1jJaSLmTqOTE4QQFRS-9Fe5Y3Nfk0VSIPZAj2HVQK5_2mYyZ2REGQwcWHM2n1u5gYEz80aCrLvUFDrIzIw
 '''
 
+```
+
+### Validate token
+
+```python
+
 client.validate_token()
 
 '''
@@ -49,6 +58,11 @@ DEBUG:iam_sdk_python.api:validate introspection response
  'scp': [],
  'sub': '53a1417b-5625-47a1-9717-a28a470bb149'}
 '''
+```
+
+### List roles
+
+```python
 
 client.list_my_roles()
 '''
@@ -58,6 +72,12 @@ DEBUG:urllib3.connectionpool:http://localhost:9000 "GET /api/me/roles HTTP/1.1" 
 DEBUG:iam_sdk_python.api:validate my roles response
 [{'rolename': 'teste', 'tenant_id': 'cseinf', 'session_duration': 1}]
 '''
+
+```
+
+### Assume role
+
+```python
 
 client.assume_role(role_name="teste", tenant="cseinf").validate_token()
 '''
@@ -91,6 +111,46 @@ DEBUG:iam_sdk_python.api:validate introspection response
  'scp': [],
  'sub': '8f311f1b-0d49-4a35-8cc1-0a4dac4bd2aa'}
 '''
+
+```
+
+### Check authorization / permission
+
+```python
+import iam_sdk_python
+from iam_sdk_python.context import ContextCallerForward
+
+client = iam_sdk_python.client(
+    api_access_key=api_access_key,
+    api_secret_key=api_secret_key,
+).login()
+
+caller_context = ContextCallerForward(
+    caller_token_jwt="eyJhbGciOiJIUzI1Ni....",
+    caller_source_ip="192.0.0.1",
+    caller_user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+    caller_referer="localhost",
+    caller_resource_tenant="CCODE9",
+)
+
+action = 'Service::Nostromos::Action::"CreateDatabase2"'
+resource = 'Database::"Mysql"'
+additional_context = {"requestedRegion": "tesp1"}
+
+# bool response
+valid = client.is_authorized_to_call_action(
+    caller=caller_context,
+    action=action,
+    resource=resource,
+    additional_context=additional_context,
+)
+
+```
+
+
+### Exception when listing roles
+
+```python
 
 # try to list which roles, the assume role can use
 # must happen an exception

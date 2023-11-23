@@ -51,16 +51,18 @@ class Client:
         """
         url = f"{self.config.get_endpoint_authn()}/login"
 
-        form = {
+        payload = {
             "username": self._api_access_key,
             "password": self._api_secret_key,
         }
         if service:
-            form["service"] = service
+            payload["service"] = service
         if region:
-            form["region"] = region
+            payload["region"] = region
 
-        resp = requests.post(url, json=form, verify=self._validate_ssl)
+        logger.debug("Body request: %s", payload)
+
+        resp = requests.post(url, json=payload, verify=self._validate_ssl)
 
         logger.debug("Header response: %s", resp.headers)
         logger.debug("Body response: %s", resp.text)
@@ -87,24 +89,28 @@ class Client:
         """
         url = f"{self.config.get_endpoint_authn()}/login/assumerole"
 
-        form = {
+        payload = {
             "role": role_name,
             "tenant": tenant,
         }
 
         if service:
-            form["service"] = service
+            payload["service"] = service
         if region:
-            form["region"] = region
+            payload["region"] = region
 
         logger.debug("requesting assume role")
+        logger.debug("Body request: %s", payload)
 
         resp = requests.post(
             url,
-            json=form,
+            json=payload,
             headers={"Authorization": f"Bearer {self._token}"},
             verify=self._validate_ssl,
         )
+
+        logger.debug("Header response: %s", resp.headers)
+        logger.debug("Body response: %s", resp.text)
 
         data = self._validate_api_response("assume role", resp)["data"]
 
@@ -127,6 +133,9 @@ class Client:
             verify=self._validate_ssl,
         )
 
+        logger.debug("Header response: %s", resp.headers)
+        logger.debug("Body response: %s", resp.text)
+
         roles = self._validate_api_response("my roles", resp)["data"]["roles"]
 
         return roles
@@ -148,6 +157,9 @@ class Client:
             headers={"Authorization": f"Bearer {self._token}"},
             verify=self._validate_ssl,
         )
+
+        logger.debug("Header response: %s", resp.headers)
+        logger.debug("Body response: %s", resp.text)
 
         return self._validate_api_response("token_validate", resp)["data"]
 
