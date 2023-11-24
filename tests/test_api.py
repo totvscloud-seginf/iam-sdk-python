@@ -120,12 +120,13 @@ class TestApi(unittest.TestCase):
         additional_context = {"requestedRegion": "tesp1"}
 
         try:
-            client.is_authorized_to_call_action(
+            resp = client.is_authorized_to_call_action(
                 caller=caller_context,
                 action=action,
                 resource=resource,
                 additional_context=additional_context,
             )
+            self.assertFalse(resp["decision"], "mocked response is not allowed")
         except Exception:
             self.fail(
                 f"is_authorized_to_call_action() got exception: {traceback.format_exc()}"

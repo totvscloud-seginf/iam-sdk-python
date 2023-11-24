@@ -169,7 +169,7 @@ class Client:
         action: str,
         resource: str,
         additional_context: Dict[str, Any] = {},
-    ) -> bool:
+    ) -> Dict[str, Any]:
         """
         Request if the caller making the request, is authorized.
 
@@ -177,6 +177,19 @@ class Client:
         :param action: the permission to check the action
         :resource: which resource it is been requested
         :additional_context: optional parameters to validate the permission, for example mfa enabled, region
+
+        Returns: a dict containing if the user is allowed (decision), and which policy matched
+
+        Example:
+        {
+            "decision": true, // "Allow"
+            "diagnostics": {
+                "reason": [
+                    "policy_id" || None // when null, no policies were found
+                ],
+                "errors": []
+            }
+        }
         """
         url = f"{self.config.get_endpoint_authz()}/is_authorized"
         headers = {
@@ -214,7 +227,10 @@ class Client:
 
         response = self._validate_api_response("token_validate", resp)
 
-        return response["decision"] == "Allow"
+        # {"decision":"Allow","diagnostics":{"reason":["ebbae3f4-9228-4f53-b953-5759bd1e9a1c"],"errors":[]}}
+        # convert decision to bool
+        response["decision"] = response["decision"] == "Allow"
+        return response
 
     def _validate_api_response(
         self, api_name: str, resp: requests.Response

@@ -81,13 +81,8 @@ def mock_get_invalid_token(url, **kargs):
 
 
 def mock_post(url, **kargs):
-    # params = kargs.get("params", {})
-    # data = kargs.get("data", {})
-    # headers = kargs.get("headers", {})
-
-    # print(f"mock_post url={url}, params={params}, data={data}, headers={headers}")
-
     if url.endswith("/is_authorized"):
+        # {"decision": "Allow", "diagnostics": {"reason": ["ebbae3f4-9228-4f53-b953-5759bd1e9a1c"],"errors": []}}
         response = json.dumps(
             {"decision": "Deny", "diagnostics": {"reason": [], "errors": []}}
         )
