@@ -145,6 +145,24 @@ valid = client.is_authorized_to_call_action(
     additional_context=additional_context,
 )
 
+# contains the policy match if found
+details = client.is_authorized_to_call_action_with_context(
+    caller=caller_context,
+    action=action,
+    resource=resource,
+    additional_context=additional_context,
+)
+'''
+{
+    "decision": "Allow"| "Deny",
+    "diagnostics":{
+        "reason": ["ebbae3f4-9228-4f53-b953-5759bd1e9a1c"],
+        "errors": []
+    }
+}
+'''
+
+
 ```
 
 

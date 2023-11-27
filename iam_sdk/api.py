@@ -163,7 +163,7 @@ class Client:
 
         return self._validate_api_response("token_validate", resp)["data"]
 
-    def is_authorized_to_call_action(
+    def is_authorized_to_call_action_with_context(
         self,
         caller: ContextCallerForward,
         action: str,
@@ -182,7 +182,7 @@ class Client:
 
         Example:
         {
-            "decision": true, // "Allow"
+            "decision": "Allow" | "Deny"
             "diagnostics": {
                 "reason": [
                     "policy_id" || None // when null, no policies were found
@@ -226,11 +226,34 @@ class Client:
         logger.debug("Body response: %s", resp.text)
 
         response = self._validate_api_response("token_validate", resp)
-
-        # {"decision":"Allow","diagnostics":{"reason":["ebbae3f4-9228-4f53-b953-5759bd1e9a1c"],"errors":[]}}
-        # convert decision to bool
-        response["decision"] = response["decision"] == "Allow"
         return response
+
+    def is_authorized_to_call_action(
+        self,
+        caller: ContextCallerForward,
+        action: str,
+        resource: str,
+        additional_context: Dict[str, Any] = {},
+    ) -> bool:
+        """
+        Request if the caller making the request, is authorized.
+
+        :param caller: the required headers to forward
+        :param action: the permission to check the action
+        :resource: which resource it is been requested
+        :additional_context: optional parameters to validate the permission, for example mfa enabled, region
+
+        Returns: boolean if the user is authorized
+        """
+        return (
+            self.is_authorized_to_call_action_with_context(
+                caller=caller,
+                action=action,
+                resource=resource,
+                additional_context=additional_context,
+            )["decision"]
+            == "Allow"
+        )
 
     def _validate_api_response(
         self, api_name: str, resp: requests.Response
