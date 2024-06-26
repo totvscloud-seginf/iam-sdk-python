@@ -169,6 +169,7 @@ class Client:
         action: str,
         resource: str,
         additional_context: Dict[str, Any] = {},
+        is_resource_policy: bool = False,
     ) -> Dict[str, Any]:
         """
         Request if the caller making the request, is authorized.
@@ -177,6 +178,7 @@ class Client:
         :param action: the permission to check the action
         :resource: which resource it is been requested
         :additional_context: optional parameters to validate the permission, for example mfa enabled, region
+        :is_resource_policy: if the policy is a resource policy
 
         Returns: a dict containing if the user is allowed (decision), and which policy matched
 
@@ -191,7 +193,8 @@ class Client:
             }
         }
         """
-        url = f"{self.config.get_endpoint_authz()}/is_authorized"
+        path = "resource/is_authorized" if is_resource_policy else "is_authorized"
+        url = f"{self.config.get_endpoint_authz()}/{path}"
         headers = {
             "Authorization": f"Bearer {self._token}",
         }
@@ -247,6 +250,69 @@ class Client:
         """
         return (
             self.is_authorized_to_call_action_with_context(
+                caller=caller,
+                action=action,
+                resource=resource,
+                additional_context=additional_context,
+            )["decision"]
+            == "Allow"
+        )
+
+    def is_resource_authorized_to_call_action_with_context(
+        self,
+        caller: ContextCallerForward,
+        action: str,
+        resource: str,
+        additional_context: Dict[str, Any] = {},
+    ) -> Dict[str, Any]:
+        """
+        Request if the caller making the request, is resource authorized.
+
+        :param caller: the required headers to forward
+        :param action: the permission to check the action
+        :resource: which resource it is been requested
+        :additional_context: optional parameters to validate the permission, for example mfa enabled, region
+
+        Returns: a dict containing if the user is allowed (decision), and which policy matched
+
+        Example:
+        {
+            "decision": "Allow" | "Deny"
+            "diagnostics": {
+                "reason": [
+                    "policy_id" || None // when null, no policies were found
+                ],
+                "errors": []
+            }
+        }
+        """
+        return self.is_authorized_to_call_action_with_context(
+            caller=caller,
+            action=action,
+            resource=resource,
+            additional_context=additional_context,
+            is_resource_policy=True,
+        )
+
+    def is_resource_authorized_to_call_action(
+        self,
+        caller: ContextCallerForward,
+        action: str,
+        resource: str,
+        additional_context: Dict[str, Any] = {},
+    ) -> bool:
+        """
+        Request if the caller making the request, is resource authorized.
+
+        :param caller: the required headers to forward
+        :param action: the permission to check the action
+        :resource: which resource it is been requested
+        :additional_context: optional parameters to validate the permission, for example mfa enabled, region
+
+        Returns: boolean if the user is authorized
+        """
+        return (
+            self.is_resource_authorized_to_call_action_with_context(
                 caller=caller,
                 action=action,
                 resource=resource,
