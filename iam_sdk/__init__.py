@@ -5,6 +5,7 @@ from .api import Client
 def client(
     endpoint_authn=None,
     endpoint_authz=None,
+    endpoint_cp=None,
     validate_ssl=True,
     api_access_key=None,
     api_secret_key=None,
@@ -12,6 +13,7 @@ def client(
     return Client(
         endpoint_authn=endpoint_authn,
         endpoint_authz=endpoint_authz,
+        endpoint_cp=endpoint_cp,
     ).client(
         api_access_key=api_access_key,
         api_secret_key=api_secret_key,
