@@ -1,8 +1,7 @@
 import requests
 import logging
 from http import HTTPStatus
-import urllib.parse
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Literal
 from .config import Config
 from .exceptions import (
     TokenInvalidError,
@@ -10,11 +9,13 @@ from .exceptions import (
     NotAuthorizedException,
 )
 from .context import ContextCallerForward
+from .services.iam import IAM
+from .domain.client_repository import ClientRepository, LogLevel
 
 logger = logging.getLogger(__name__)
 
 
-class Client:
+class Client(ClientRepository):
     def __init__(self, **kargs) -> None:
         self.config = Config(**kargs)
         self._api_access_key = None
@@ -23,9 +24,7 @@ class Client:
         self._region = ""
         self._service = ""
         self._token = ""
-
-    def set_debug(self):
-        logger.setLevel(logging.DEBUG)
+        self._log_level: LogLevel = "INFO"
 
     @property
     def iam(self):
@@ -34,6 +33,25 @@ class Client:
     @property
     def token(self):
         return self._token
+
+    def get_log_level(self) -> LogLevel:
+        return self._log_level
+
+    def get_config(self):
+        return self.config
+
+    def get_token(self) -> str:
+        return self._token
+
+    def get_validate_ssl(self) -> bool:
+        return self._validate_ssl
+
+    def set_log_level(
+        self,
+        level: LogLevel,
+    ):
+        self._log_level = level
+        logger.setLevel(level)
 
     def set_token(self, current_token: str):
         self._token = current_token
@@ -72,10 +90,11 @@ class Client:
 
         resp = requests.post(url, json=payload, verify=self._validate_ssl)
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        data = self._validate_api_response("login", resp)["data"]
+        data = self.validate_api_response("login", resp)["data"]
 
         self._token = data["access_token"]
         self._expires_in = data["expires_in"]
@@ -117,10 +136,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        data = self._validate_api_response("assume role", resp)["data"]
+        data = self.validate_api_response("assume role", resp)["data"]
 
         self._token = data["access_token"]
         self._expires_in = data["expires_in"]
@@ -141,10 +161,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        roles = self._validate_api_response("my roles", resp)["data"]["roles"]
+        roles = self.validate_api_response("my roles", resp)["data"]["roles"]
 
         return roles
 
@@ -166,10 +187,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        return self._validate_api_response("token_validate", resp)["data"]
+        return self.validate_api_response("token_validate", resp)["data"]
 
     def is_authorized_to_call_action_with_context(
         self,
@@ -233,10 +255,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        response = self._validate_api_response("token_validate", resp)
+        response = self.validate_api_response("token_validate", resp)
         return response
 
     def is_authorized_to_call_action(
@@ -329,7 +352,7 @@ class Client:
             == "Allow"
         )
 
-    def _validate_api_response(
+    def validate_api_response(
         self, api_name: str, resp: requests.Response
     ) -> Dict[str, Any]:
         """
@@ -348,6 +371,7 @@ class Client:
         # validate if the api is not 2XX
         if api_status_code >= 400 or api_status_code >= 500:
             logger.error("%s contains invalid response", api_name)
+            logger.error(f"{api_status_code=}, {api_response_text=}")
 
             if api_status_code == HTTPStatus.UNAUTHORIZED:
                 raise TokenInvalidError()
@@ -355,277 +379,8 @@ class Client:
             if api_status_code == HTTPStatus.FORBIDDEN:
                 raise NotAuthorizedException(message=api_response_text)
 
-            if (
-                api_status_code == HTTPStatus.BAD_REQUEST
-                or api_status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
-            ):
-                raise InvalidRequestError(
-                    status_code=api_status_code, message=api_response_text
-                )
+            raise InvalidRequestError(
+                status_code=api_status_code, message=api_response_text
+            )
 
         return resp.json()
-
-
-class IAM:
-    def __init__(self, client: Client) -> None:
-        self._client = client
-
-    def create_user(self, username) -> Any:
-        url = f"{self._client.config.get_endpoint_cp()}/users"
-
-        logger.debug("requesting create user")
-        payload = {"username": username}
-
-        logger.debug("Body request: %s", payload)
-
-        resp = requests.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        resp = self._client._validate_api_response("create_user", resp)
-
-        return resp["username"]
-
-    def delete_user(self, username) -> Any:
-        username = urllib.parse.quote_plus(username)
-        url = f"{self._client.config.get_endpoint_cp()}/users/{username}"
-
-        logger.debug("requesting delete user")
-        payload = {"username": username}
-
-        logger.debug("Body request: %s", payload)
-
-        resp = requests.delete(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        _ = self._client._validate_api_response("delete_user", resp)
-
-    def list_users(self) -> Any:
-        url = f"{self._client.config.get_endpoint_cp()}/users"
-
-        logger.debug("requesting list user")
-        logger.debug(f"endpoint: {url}")
-
-        resp = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        return self._client._validate_api_response("list_users", resp)
-
-    def get_user(self, username) -> Any:
-        username = urllib.parse.quote_plus(username)
-        url = f"{self._client.config.get_endpoint_cp()}/users/{username}"
-
-        logger.debug("requesting delete user")
-
-        resp = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        return self._client._validate_api_response("get_user", resp)
-
-    def create_user_access_key(self, username, description="") -> Any:
-        username = urllib.parse.quote_plus(username)
-        url = f"{self._client.config.get_endpoint_cp()}/users/{username}/accesskey"
-
-        logger.debug("requesting delete user")
-        payload = {"description": description}
-
-        logger.debug("Body request: %s", payload)
-
-        resp = requests.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        resp = self._client._validate_api_response("create_user_access_key", resp)[
-            "data"
-        ]
-
-    def delete_user_access_key(self, username, access_key_id: str) -> Any:
-        access_key_id = urllib.parse.quote_plus(access_key_id)
-        url = f"{self._client.config.get_endpoint_cp()}/users/{username}/accesskey/{access_key_id}"
-
-        logger.debug("requesting delete_user_access_key")
-
-        resp = requests.delete(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        _ = self._client._validate_api_response("delete_user_access_key", resp)
-
-    def attach_user_policy(self, username, policies_trn: list) -> Any:
-        username = urllib.parse.quote_plus(username)
-        url = f"{self._client.config.get_endpoint_cp()}/users/{username}/policies"
-
-        logger.debug("requesting attach_user_policy")
-        payload = {"policies": policies_trn}
-
-        logger.debug("Body request: %s", payload)
-
-        resp = requests.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        _ = self._client._validate_api_response("attach_user_policy", resp)
-
-    def detach_user_policy(self, username, policy_trn: str) -> Any:
-        policy_trn = urllib.parse.quote_plus(policy_trn)
-        url = f"{self._client.config.get_endpoint_cp()}/users/{username}/policies/{policy_trn}"
-
-        logger.debug("requesting detach_user_policy")
-
-        resp = requests.delete(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        _ = self._client._validate_api_response("detach_user_policy", resp)
-
-    def create_policy(
-        self,
-        name,
-        description,
-        policies_statements: list,
-    ) -> Any:
-        url = f"{self._client.config.get_endpoint_cp()}/policies"
-
-        logger.debug("requesting create_policy")
-        payload = {
-            "name": name,
-            "policyType": "tenant",
-            "description": description,
-            "engineVersion": "2023-09-18",
-            "statements": policies_statements,
-        }
-        logger.debug(f"payload: {payload}")
-
-        resp = requests.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        _ = self._client._validate_api_response("create_policy", resp)
-
-    def list_policies(self) -> Any:
-        url = f"{self._client.config.get_endpoint_cp()}/policies"
-
-        logger.debug("requesting list_policies")
-
-        resp = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        return self._client._validate_api_response("list_policies", resp)["data"]
-
-    def get_policy(self, policy_trn) -> Any:
-        policy_trn = urllib.parse.quote_plus(policy_trn)
-        url = f"{self._client.config.get_endpoint_cp()}/policies/{policy_trn}"
-
-        logger.debug("requesting get_policy")
-
-        resp = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        return self._client._validate_api_response("get_user", resp)
-
-    def delete_policy(self, policy_trn) -> Any:
-        policy_trn = urllib.parse.quote_plus(policy_trn)
-        url = f"{self._client.config.get_endpoint_cp()}/policies/{policy_trn}"
-
-        logger.debug("requesting delete_policy")
-
-        resp = requests.delete(
-            url,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        _ = self._client._validate_api_response("get_user", resp)
-
-    def update_policy(self, policy_trn, description, policies_statements) -> Any:
-        policy_trn = urllib.parse.quote_plus(policy_trn)
-        url = f"{self._client.config.get_endpoint_cp()}/policies/{policy_trn}"
-
-        logger.debug("requesting update_policy")
-
-        payload = {
-            "policyType": "tenant",
-            "description": description,
-            "engineVersion": "2023-09-18",
-            "statements": policies_statements,
-        }
-        logger.debug(f"payload: {payload}")
-
-        resp = requests.put(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {self._client._token}"},
-            verify=self._client._validate_ssl,
-        )
-
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
-
-        _ = self._client._validate_api_response("update_policy", resp)
