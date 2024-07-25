@@ -370,8 +370,7 @@ class Client(ClientRepository):
 
         # validate if the api is not 2XX
         if api_status_code >= 400 or api_status_code >= 500:
-            logger.error("%s contains invalid response", api_name)
-            logger.error(f"{api_status_code=}, {api_response_text=}")
+            logger.debug(f"{api_name=}, {api_status_code=}, {api_response_text=}")
 
             if api_status_code == HTTPStatus.UNAUTHORIZED:
                 raise TokenInvalidError()
