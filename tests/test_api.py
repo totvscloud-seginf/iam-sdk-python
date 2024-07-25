@@ -185,11 +185,11 @@ class TestApi(unittest.TestCase):
             caller_referer="localhost",
             caller_resource_tenant="CCODE9",
         )
-        
+
         resource = 'Database::"Mysql"'
         action = 'Service::Nostromos::Action::"CreateDatabase2"'
         additional_context = {"requestedRegion": "tesp1"}
-        
+
         try:
             resp = client.is_resource_authorized_to_call_action_with_context(
                 caller=caller_context,

@@ -121,6 +121,10 @@ def mock_post(url, **kargs):
             },
         )
 
+    if url.endswith("/users/mock/accesskey"):
+        response = '{"status": "success", "message": "ok", "data": {"accessSecretKey": "uniqSecret", "accessKeyId": "uniqId"}}'
+        return FakeObject(response=response, status_code=200)
+
     raise Exception("endpoint mock not found")
 
 
@@ -218,3 +222,49 @@ def mock_post_assumerole_forbidden(url, **kargs):
         )
 
     raise Exception("endpoint mock not found")
+
+
+def mock_generic_get(url, **kargs):
+    response = json.dumps(
+        {
+            "data": [{"fake": True}],
+            "meta": {
+                "size": 10,
+                "page": 1,
+                "total": 10,
+                "totalPages": 1,
+                "links": {
+                    "self": "/roles/object/policies?page[number]=1&page[size]=10",
+                    "first": "/roles/object/policies?page[number]=1&page[size]=10",
+                    "prev": None,
+                    "next": None,
+                    "last": "/roles/object/policies?page[number]=1&page[size]=10",
+                },
+            },
+            "error": False,
+            "message": "success",
+        }
+    )
+    return FakeObject(
+        response=response,
+        status_code=200,
+        headers={},
+    )
+
+
+def mock_generic_post(url, **kargs):
+    response = json.dumps(
+        {
+            "error": False,
+            "message": "success",
+            "username": "",
+            "data": {
+                "fake": True,
+            },
+        }
+    )
+    return FakeObject(
+        response=response,
+        status_code=200,
+        headers={},
+    )

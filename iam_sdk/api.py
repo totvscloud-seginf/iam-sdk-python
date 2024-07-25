@@ -1,7 +1,7 @@
 import requests
 import logging
 from http import HTTPStatus
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Literal
 from .config import Config
 from .exceptions import (
     TokenInvalidError,
@@ -9,11 +9,13 @@ from .exceptions import (
     NotAuthorizedException,
 )
 from .context import ContextCallerForward
+from .services.iam import IAM
+from .domain.client_repository import ClientRepository, LogLevel
 
 logger = logging.getLogger(__name__)
 
 
-class Client:
+class Client(ClientRepository):
     def __init__(self, **kargs) -> None:
         self.config = Config(**kargs)
         self._api_access_key = None
@@ -22,10 +24,34 @@ class Client:
         self._region = ""
         self._service = ""
         self._token = ""
+        self._log_level: LogLevel = "INFO"
+
+    @property
+    def iam(self):
+        return IAM(self)
 
     @property
     def token(self):
         return self._token
+
+    def get_log_level(self) -> LogLevel:
+        return self._log_level
+
+    def get_config(self):
+        return self.config
+
+    def get_token(self) -> str:
+        return self._token
+
+    def get_validate_ssl(self) -> bool:
+        return self._validate_ssl
+
+    def set_log_level(
+        self,
+        level: LogLevel,
+    ):
+        self._log_level = level
+        logger.setLevel(level)
 
     def set_token(self, current_token: str):
         self._token = current_token
@@ -64,10 +90,11 @@ class Client:
 
         resp = requests.post(url, json=payload, verify=self._validate_ssl)
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        data = self._validate_api_response("login", resp)["data"]
+        data = self.validate_api_response("login", resp)["data"]
 
         self._token = data["access_token"]
         self._expires_in = data["expires_in"]
@@ -109,10 +136,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        data = self._validate_api_response("assume role", resp)["data"]
+        data = self.validate_api_response("assume role", resp)["data"]
 
         self._token = data["access_token"]
         self._expires_in = data["expires_in"]
@@ -133,10 +161,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        roles = self._validate_api_response("my roles", resp)["data"]["roles"]
+        roles = self.validate_api_response("my roles", resp)["data"]["roles"]
 
         return roles
 
@@ -158,10 +187,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        return self._validate_api_response("token_validate", resp)["data"]
+        return self.validate_api_response("token_validate", resp)["data"]
 
     def is_authorized_to_call_action_with_context(
         self,
@@ -225,10 +255,11 @@ class Client:
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s", resp.headers)
-        logger.debug("Body response: %s", resp.text)
+        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug("Body response:")
+        logger.debug(resp.text)
 
-        response = self._validate_api_response("token_validate", resp)
+        response = self.validate_api_response("token_validate", resp)
         return response
 
     def is_authorized_to_call_action(
@@ -321,7 +352,7 @@ class Client:
             == "Allow"
         )
 
-    def _validate_api_response(
+    def validate_api_response(
         self, api_name: str, resp: requests.Response
     ) -> Dict[str, Any]:
         """
@@ -339,7 +370,7 @@ class Client:
 
         # validate if the api is not 2XX
         if api_status_code >= 400 or api_status_code >= 500:
-            logger.error("%s contains invalid response", api_name)
+            logger.debug(f"{api_name=}, {api_status_code=}, {api_response_text=}")
 
             if api_status_code == HTTPStatus.UNAUTHORIZED:
                 raise TokenInvalidError()
@@ -347,12 +378,8 @@ class Client:
             if api_status_code == HTTPStatus.FORBIDDEN:
                 raise NotAuthorizedException(message=api_response_text)
 
-            if (
-                api_status_code == HTTPStatus.BAD_REQUEST
-                or api_status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
-            ):
-                raise InvalidRequestError(
-                    status_code=api_status_code, message=api_response_text
-                )
+            raise InvalidRequestError(
+                status_code=api_status_code, message=api_response_text
+            )
 
         return resp.json()

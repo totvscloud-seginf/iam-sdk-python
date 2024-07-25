@@ -37,6 +37,8 @@ class InvalidRequestError(BaseException):
         status_code: int = 500,
         message: str = "",
     ) -> None:
+        self.status_code = status_code
+        self.message = message
         msg = (
             f"Invalid API Request, received http {status_code}\n"
             f"API Response: {message}"
