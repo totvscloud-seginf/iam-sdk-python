@@ -1,0 +1,28 @@
+name: DEV - DTrack
+
+on:
+  push:
+    branches:
+      - "development"
+      - "main"
+    paths:
+      - ".github/workflows/dependency_track_dev.yml"
+      - "iam_sdk/**"
+      - "poetry.lock"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  dependency_track:
+    name: Deploy artifact to Dependency Track
+    uses: totvscloud-seginf/shared-workflows/.github/workflows/dependency-track.yml@v1.2.16
+    secrets:
+      dtrack_x_api_key: ${{ secrets.DTRACK_X_API_KEY_PROD }}
+    with:
+      project_id: ff11c249-1e2e-453d-a2a0-b6eb9112f64d
+      build_container: false
+      build_submodules: false
+      scan_ref: "poetry.lock"
+      scan_type: fs
