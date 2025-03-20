@@ -6,6 +6,8 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 [tool.poetry]
@@ -14,7 +16,7 @@ version = "0.3.0"
 description = "SDK for IAM "
 authors = []
 readme = "README.md"
-packages = [{include = "iam_sdk"}]
+packages = [{ include = "iam_sdk" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
