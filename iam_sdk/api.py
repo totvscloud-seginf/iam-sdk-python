@@ -25,6 +25,7 @@ class Client(ClientRepository):
         self._service = ""
         self._token = ""
         self._log_level: LogLevel = "INFO"
+        self._timeout = kargs.get("timeout", 30)
 
     @property
     def iam(self):
@@ -224,7 +225,6 @@ class Client(ClientRepository):
         }
         """
         path = "resource/is_authorized" if is_resource_policy else "is_authorized"
-        url = f"{self.config.get_endpoint_authz()}/{path}"
         headers = {
             "Authorization": f"Bearer {self._token}",
         }
@@ -248,19 +248,62 @@ class Client(ClientRepository):
         logger.debug("Request headers: %s", headers)
         logger.debug("Request body: %s", payload)
 
-        resp = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            verify=self._validate_ssl,
-        )
+        # Try the primary authz endpoint first, then any fallback endpoints
+        # supplied by the SDK user. Only network timeouts / unreachable errors
+        # trigger a retry against the next endpoint; a valid HTTP response
+        # (even a 4XX/5XX) is treated as authoritative and returned/raised.
+        endpoints = self.config.get_authz_endpoints()
+        last_transport_error: requests.exceptions.RequestException | None = None
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
-        logger.debug("Body response:")
-        logger.debug(resp.text)
+        for index, endpoint in enumerate(endpoints):
+            url = f"{endpoint}/{path}"
+            try:
+                resp = requests.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    verify=self._validate_ssl,
+                    timeout=self._timeout,
+                )
+            except (
+                requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError,
+            ) as e:
+                last_transport_error = e
+                remaining = len(endpoints) - index - 1
+                logger.warning(
+                    "Authz endpoint %s failed (%s). %d fallback endpoint(s) left.",
+                    url,
+                    type(e).__name__,
+                    remaining,
+                )
+                continue
+            except requests.exceptions.RequestException as e:
+                logger.error("Request to IAM server failed: %s", str(e))
+                raise InvalidRequestError(
+                    status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+                    message=f"Request to IAM server failed: {str(e)}",
+                ) from e
 
-        response = self.validate_api_response("token_validate", resp)
-        return response
+            logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+            logger.debug("Body response:")
+            logger.debug(resp.text)
+
+            return self.validate_api_response("token_validate", resp)
+
+        # Every endpoint (primary + fallbacks) timed out or was unreachable.
+        if isinstance(last_transport_error, requests.exceptions.Timeout):
+            logger.error("Request to IAM server timed out on all authz endpoints")
+            raise InvalidRequestError(
+                status_code=HTTPStatus.REQUEST_TIMEOUT,
+                message="Request to IAM server timed out",
+            ) from last_transport_error
+
+        logger.error("Request to IAM server failed on all authz endpoints")
+        raise InvalidRequestError(
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+            message=f"Request to IAM server failed: {str(last_transport_error)}",
+        ) from last_transport_error
 
     def is_authorized_to_call_action(
         self,

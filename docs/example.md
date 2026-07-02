@@ -165,6 +165,36 @@ details = client.is_authorized_to_call_action_with_context(
 
 ```
 
+### Authorization with fallback endpoints (retry on timeout)
+
+The authorization call (`is_authorized_to_call_action*`) can retry against
+extra authz endpoints when the primary one times out or is unreachable. You
+provide the fallback endpoints — the SDK tries them, in order, after the
+primary. Combine it with a short `timeout` so a stuck endpoint fails fast.
+
+```python
+import iam_sdk
+
+client = iam_sdk.client(
+    api_access_key=api_access_key,
+    api_secret_key=api_secret_key,
+    endpoint_authz="https://authz-primary.example.com/v1",
+    # tried in order, only when the primary times out / is unreachable
+    endpoint_authz_fallbacks=[
+        "https://authz-fallback-1.example.com/v1",
+        "https://authz-fallback-2.example.com/v1",
+    ],
+    timeout=2,  # seconds, per request
+).login()
+```
+
+`endpoint_authz_fallbacks` also accepts a comma-separated string and can be
+set via the `IAM_AUTHZ_FALLBACK_ENDPOINTS` environment variable. Duplicates of
+the primary endpoint are ignored. Only network timeouts / connection errors
+trigger a retry; a valid HTTP response (including `403 Forbidden`) is treated
+as authoritative. If every endpoint fails, an `InvalidRequestError` is raised
+(`408` on timeout, `503` when unreachable).
+
 
 ### Exception when listing roles
 

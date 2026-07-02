@@ -174,6 +174,88 @@ class TestApi(unittest.TestCase):
                 f"ContextCallerForward.validate() got exception when all parameters are set: {traceback.format_exc()}"
             )
 
+    def _build_caller_context(self):
+        return ContextCallerForward(
+            caller_token_jwt="eyJhbGciOiJIUzI1NiIsImtpZCI6IjgzN2IxZDU5LTRiZTktNDg1OS1iNzhlLTMxNWY4OTAwMWNmMCIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJleHAiOjE2OTI3MjkxMjYsImV4dCI6eyJwcmluY2lwYWwiOiJ0Y2xvdWQ6OnRlbmFudDo6Q0NPREUwOjpyb2xlOjpcInJvbGVfcml2YXNhbmRyZVwiIiwicmVnaW9uIjoidGVzcDIiLCJzZXJ2aWNlIjoicm9kanVsIiwidGVuYW50IjoiQ0NPREUwIiwidXNlcl9pZCI6IjI4NTc3NzM0LWZyMTktNGM2NS05ODg3LWM1YjY2NjM0NjlkMyIsInVzZXJuYW1lIjoidXNlcmFwaSIsIm1mYSI6ImFjdGl2ZSJ9LCJpYXQiOjE2OTI3MjU1MjYsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6NDQ0NCIsImp0aSI6IjI2MzFhYjRhLTc1ZTgtNDUwOS1iOGRhLTBlZTJkMTRiNzM0OCIsIm5iZiI6MTY5MjcyNTUyNiwicmVnaW9uIjoidGVzcDIiLCJzY3AiOltdLCJzZXJ2aWNlIjoicmVzdHJpY3Rpb25zIiwic3ViIjoiM2FkZWVlODItZjFjNy00MzJiLTg0MjQtYzhlYjFkNzQ1NTNlIn0.x5sSsBcxYNMEClAcJIFngdkZRY6H-v8Dt72Vn1pI2Uc",
+            caller_source_ip="192.0.0.1",
+            caller_user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+            caller_referer="localhost",
+            caller_resource_tenant="CCODE9",
+        )
+
+    def test_authz_fallback_endpoints_ordering(self):
+        client = iam_sdk.client(
+            endpoint_authz="http://primary:8180/v1",
+            endpoint_authz_fallbacks=[
+                "http://fallback-1:8180/v1",
+                # duplicate of the primary is removed
+                "http://primary:8180/v1",
+                "http://fallback-2:8180/v1",
+            ],
+        )
+
+        self.assertEqual(
+            client.config.get_authz_endpoints(),
+            [
+                "http://primary:8180/v1",
+                "http://fallback-1:8180/v1",
+                "http://fallback-2:8180/v1",
+            ],
+        )
+
+    def test_authz_fallbacks_accept_comma_separated_string(self):
+        client = iam_sdk.client(
+            endpoint_authz="http://primary:8180/v1",
+            endpoint_authz_fallbacks="http://fallback-1:8180/v1, http://fallback-2:8180/v1",
+        )
+
+        self.assertEqual(
+            client.config.get_authz_endpoints(),
+            [
+                "http://primary:8180/v1",
+                "http://fallback-1:8180/v1",
+                "http://fallback-2:8180/v1",
+            ],
+        )
+
+    @patch(
+        "iam_sdk.api.requests.post", patch_api.mock_post_authz_primary_timeout
+    )
+    def test_is_authorized_retries_on_timeout(self):
+        client = iam_sdk.client(
+            endpoint_authz="http://primary:8180/v1",
+            endpoint_authz_fallbacks=["http://fallback:8180/v1"],
+        )
+
+        try:
+            resp = client.is_authorized_to_call_action(
+                caller=self._build_caller_context(),
+                action='Service::Nostromos::Action::"CreateDatabase2"',
+                resource='Database::"Mysql"',
+                additional_context={"requestedRegion": "tesp1"},
+            )
+            self.assertFalse(resp, "fallback endpoint should have answered Deny")
+        except Exception:
+            self.fail(
+                f"is_authorized_to_call_action() should have retried the fallback: {traceback.format_exc()}"
+            )
+
+    @patch("iam_sdk.api.requests.post", patch_api.mock_post_authz_all_timeout)
+    def test_is_authorized_raises_when_all_endpoints_timeout(self):
+        client = iam_sdk.client(
+            endpoint_authz="http://primary:8180/v1",
+            endpoint_authz_fallbacks=["http://fallback:8180/v1"],
+        )
+
+        with self.assertRaises(iam_sdk.exceptions.InvalidRequestError) as ctx:
+            client.is_authorized_to_call_action(
+                caller=self._build_caller_context(),
+                action='Service::Nostromos::Action::"CreateDatabase2"',
+                resource='Database::"Mysql"',
+                additional_context={"requestedRegion": "tesp1"},
+            )
+        self.assertEqual(ctx.exception.status_code, 408)
+
     @patch("iam_sdk.api.requests.post", patch_api.mock_post)
     def test_is_resource_authorized(self):
         client = iam_sdk.client()

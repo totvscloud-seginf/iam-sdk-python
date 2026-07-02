@@ -1,5 +1,31 @@
 import json
+import requests
 from tests.patches.http import FakeObject
+
+
+def mock_post_authz_primary_timeout(url, **kargs):
+    """Primary authz endpoint times out; a fallback endpoint answers."""
+    if url.endswith("/is_authorized"):
+        if "fallback" in url:
+            response = json.dumps(
+                {"decision": "Deny", "diagnostics": {"reason": [], "errors": []}}
+            )
+            return FakeObject(
+                response=response,
+                status_code=200,
+                headers={"content-type": "application/json"},
+            )
+        raise requests.exceptions.ConnectTimeout("primary authz endpoint timed out")
+
+    raise Exception("endpoint mock not found")
+
+
+def mock_post_authz_all_timeout(url, **kargs):
+    """Every authz endpoint times out."""
+    if url.endswith("/is_authorized"):
+        raise requests.exceptions.ConnectTimeout("authz endpoint timed out")
+
+    raise Exception("endpoint mock not found")
 
 
 def mock_get(url, **kargs):
