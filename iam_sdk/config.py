@@ -1,6 +1,8 @@
 import os
 from typing import List
 
+from .redact import resolve_unsafe_debug_logging
+
 AUTHN_ENDPOINT = "http://localhost:9000/api"
 AUTHZ_ENDPOINT = "http://localhost:8180/v1"
 CP_ENDPOINT = "http://localhost:443/v1"
@@ -51,6 +53,15 @@ class Config:
         if fallbacks is None:
             fallbacks = os.getenv("IAM_AUTHZ_FALLBACK_ENDPOINTS", "")
         self.endpoint_authz_fallbacks = _parse_endpoint_list(fallbacks)
+        # When enabled, the debug logs show credentials/tokens in plaintext.
+        # None (the factory default) means "not provided", so we fall back to
+        # the environment variable.
+        self.unsafe_debug_logging = resolve_unsafe_debug_logging(
+            kargs.get("unsafe_debug_logging")
+        )
+
+    def get_unsafe_debug_logging(self) -> bool:
+        return self.unsafe_debug_logging
 
     def get_endpoint_cp(self):
         return self.endpoint_cp

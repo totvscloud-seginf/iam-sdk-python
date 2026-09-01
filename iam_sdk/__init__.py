@@ -11,6 +11,7 @@ def client(
     api_secret_key=None,
     endpoint_authz_fallbacks=None,
     timeout=30,
+    unsafe_debug_logging=None,
 ):
     """
     Build an IAM SDK client.
@@ -20,6 +21,11 @@ def client(
         ``endpoint_authz`` times out or is unreachable. Can also be provided
         via the ``IAM_AUTHZ_FALLBACK_ENDPOINTS`` environment variable.
     :param timeout: per-request timeout (seconds) applied to authz calls.
+    :param unsafe_debug_logging: defaults to False, which redacts credentials,
+        tokens and authorization headers from the DEBUG logs. Set it to True
+        (or export ``IAM_SDK_UNSAFE_DEBUG_LOGGING=true``) to log the real
+        values instead - a warning is logged because the secrets then reach
+        the logs in plaintext.
     """
     return Client(
         endpoint_authn=endpoint_authn,
@@ -27,6 +33,7 @@ def client(
         endpoint_cp=endpoint_cp,
         endpoint_authz_fallbacks=endpoint_authz_fallbacks,
         timeout=timeout,
+        unsafe_debug_logging=unsafe_debug_logging,
     ).client(
         api_access_key=api_access_key,
         api_secret_key=api_secret_key,

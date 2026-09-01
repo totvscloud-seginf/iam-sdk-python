@@ -32,6 +32,55 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6IjkyZDA0ZTk4LTgxMTEtNGZkMi04M2IxLTNiNThkYTI1NDhjNyIs
 
 ```
 
+### Debug logging and credential redaction
+
+The SDK never writes credentials to the logs. Passwords, access/refresh
+tokens, `Authorization` headers and the forwarded `x-token-jwt` are replaced
+by `***REDACTED***` before the DEBUG record is emitted, while the rest of the
+request/response stays readable:
+
+```python
+logging.getLogger().setLevel(logging.DEBUG)
+
+client = iam_sdk.client(api_access_key=username, api_secret_key=password)
+client.login()
+
+'''
+DEBUG:iam_sdk.api:Body request: {'username': 'fcd1e1c8...', 'password': '***REDACTED***'}
+DEBUG:iam_sdk.api:Header response: 200 {'content-type': 'application/json'}
+DEBUG:iam_sdk.api:Body response:
+DEBUG:iam_sdk.api:{"data": {"access_token": "***REDACTED***", "expires_in": 3599, "token_type": "bearer"}, "error": false, "message": "success"}
+'''
+```
+
+To troubleshoot a request with the real values, enable `unsafe_debug_logging`.
+It logs a warning because the secrets then reach the logs in plaintext -
+**never enable it in production**:
+
+```python
+client = iam_sdk.client(
+    api_access_key=username,
+    api_secret_key=password,
+    unsafe_debug_logging=True,
+)
+
+'''
+WARNING:iam_sdk.redact:IAM_SDK_UNSAFE_DEBUG_LOGGING is ENABLED: credentials, tokens and authorization headers will be written to the debug logs in PLAINTEXT. Never enable it in production.
+DEBUG:iam_sdk.api:Body request: {'username': 'fcd1e1c8...', 'password': 'dd16b129...'}
+'''
+```
+
+The same can be done without touching the code, through the environment:
+
+```sh
+export IAM_SDK_UNSAFE_DEBUG_LOGGING=true
+```
+
+The explicit `unsafe_debug_logging` argument takes precedence over the
+environment variable. Note that this only covers the SDK's own logs - if you
+enable DEBUG for `urllib3`/`requests` as well, those libraries may log
+request data on their own.
+
 ### Validate token
 
 ```python

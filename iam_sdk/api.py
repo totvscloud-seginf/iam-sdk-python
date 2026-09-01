@@ -9,6 +9,7 @@ from .exceptions import (
     NotAuthorizedException,
 )
 from .context import ContextCallerForward
+from .redact import Redactor
 from .services.iam import IAM
 from .domain.client_repository import ClientRepository, LogLevel
 
@@ -26,6 +27,7 @@ class Client(ClientRepository):
         self._token = ""
         self._log_level: LogLevel = "INFO"
         self._timeout = kargs.get("timeout", 30)
+        self._redactor = Redactor(self.config.get_unsafe_debug_logging())
 
     @property
     def iam(self):
@@ -46,6 +48,9 @@ class Client(ClientRepository):
 
     def get_validate_ssl(self) -> bool:
         return self._validate_ssl
+
+    def get_redactor(self) -> Redactor:
+        return self._redactor
 
     def set_log_level(
         self,
@@ -87,13 +92,17 @@ class Client(ClientRepository):
         if region:
             payload["region"] = region
 
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.post(url, json=payload, verify=self._validate_ssl)
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         data = self.validate_api_response("login", resp)["data"]
 
@@ -128,7 +137,7 @@ class Client(ClientRepository):
             payload["region"] = region
 
         logger.debug("requesting assume role")
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -137,9 +146,13 @@ class Client(ClientRepository):
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         data = self.validate_api_response("assume role", resp)["data"]
 
@@ -162,9 +175,13 @@ class Client(ClientRepository):
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         roles = self.validate_api_response("my roles", resp)["data"]["roles"]
 
@@ -188,9 +205,13 @@ class Client(ClientRepository):
             verify=self._validate_ssl,
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self.validate_api_response("token_validate", resp)["data"]
 
@@ -245,8 +266,8 @@ class Client(ClientRepository):
         # merge headers
         headers = {**headers, **headers_forward}
 
-        logger.debug("Request headers: %s", headers)
-        logger.debug("Request body: %s", payload)
+        logger.debug("Request headers: %s", self._redactor.data(headers))
+        logger.debug("Request body: %s", self._redactor.data(payload))
 
         # Try the primary authz endpoint first, then any fallback endpoints
         # supplied by the SDK user. Only network timeouts / unreachable errors
@@ -285,9 +306,13 @@ class Client(ClientRepository):
                     message=f"Request to IAM server failed: {str(e)}",
                 ) from e
 
-            logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+            logger.debug(
+                "Header response: %s %s",
+                resp.status_code,
+                self._redactor.data(resp.headers),
+            )
             logger.debug("Body response:")
-            logger.debug(resp.text)
+            logger.debug("%s", self._redactor.text(resp.text))
 
             return self.validate_api_response("token_validate", resp)
 
@@ -413,7 +438,12 @@ class Client(ClientRepository):
 
         # validate if the api is not 2XX
         if api_status_code >= 400 or api_status_code >= 500:
-            logger.debug(f"{api_name=}, {api_status_code=}, {api_response_text=}")
+            logger.debug(
+                "api_name=%s, api_status_code=%s, api_response_text=%s",
+                api_name,
+                api_status_code,
+                self._redactor.text(api_response_text),
+            )
 
             if api_status_code == HTTPStatus.UNAUTHORIZED:
                 raise TokenInvalidError()

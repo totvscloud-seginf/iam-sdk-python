@@ -34,3 +34,17 @@ client = iam_sdk.client(
 
 client.login()
 ```
+
+## Debug logging
+
+Credentials and tokens are redacted from the SDK logs, so enabling
+`logging.DEBUG` is safe by default:
+
+```
+DEBUG:iam_sdk.api:Body request: {'username': 'fcd1e1c8...', 'password': '***REDACTED***'}
+```
+
+To see the real values while troubleshooting, pass
+`unsafe_debug_logging=True` to `iam_sdk.client()` or export
+`IAM_SDK_UNSAFE_DEBUG_LOGGING=true`. A warning is logged when it is enabled -
+never use it in production. See [docs/example.md](docs/example.md) for details.

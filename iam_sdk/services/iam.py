@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class IAM:
     def __init__(self, client: ClientRepository) -> None:
         self._client = client
+        self._redactor = client.get_redactor()
         logger.setLevel(client.get_log_level())
 
     def attach_role_policies(
@@ -23,7 +24,7 @@ class IAM:
         logger.debug("requesting attach_role_policies")
         payload = {"policies": policies_trn}
 
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -32,9 +33,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("attach_role_policies", resp)
 
@@ -45,7 +50,7 @@ class IAM:
         logger.debug("requesting attach_user_groups")
         payload = {"groups": groups}
 
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -54,9 +59,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("attach_user_groups", resp)
 
@@ -69,7 +78,7 @@ class IAM:
         logger.debug("requesting attach_user_policies")
         payload = {"policies": policies_trn}
 
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -78,9 +87,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("attach_user_policies", resp)
 
@@ -96,7 +109,7 @@ class IAM:
             "name": name,
             "description": description,
         }
-        logger.debug(f"payload: {payload}")
+        logger.debug("payload: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -105,9 +118,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("create_group", resp)
 
@@ -127,7 +144,7 @@ class IAM:
             "engineVersion": "2023-09-18",
             "statements": policies_statements,
         }
-        logger.debug(f"payload: {payload}")
+        logger.debug("payload: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -136,9 +153,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("create_policy", resp)
 
@@ -159,7 +180,7 @@ class IAM:
             "trustPolicy": trust_policy,
             "trustPolicyEngineVersion": "2023-09-18",
         }
-        logger.debug(f"payload: {payload}")
+        logger.debug("payload: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -168,9 +189,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("create_role", resp)
 
@@ -188,7 +213,7 @@ class IAM:
             "type": service_type,
             "permissionsManifest": permission_manifest,
         }
-        logger.debug(f"payload: {payload}")
+        logger.debug("payload: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -197,9 +222,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("create_service", resp)
 
@@ -209,7 +238,7 @@ class IAM:
         logger.debug("requesting create user")
         payload = {"username": username}
 
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -218,9 +247,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         resp = self._client.validate_api_response("create_user", resp)
 
@@ -235,7 +268,7 @@ class IAM:
         logger.debug("requesting delete user")
         payload = {"description": description}
 
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.post(
             url,
@@ -244,9 +277,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("create_user_access_key", resp)[
             "data"
@@ -264,9 +301,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("delete_group", resp)
 
@@ -282,9 +323,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("delete_policy", resp)
 
@@ -300,9 +345,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("delete_role", resp)
 
@@ -318,9 +367,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("delete_service", resp)
 
@@ -331,7 +384,7 @@ class IAM:
         logger.debug("requesting delete user")
         payload = {"username": username}
 
-        logger.debug("Body request: %s", payload)
+        logger.debug("Body request: %s", self._redactor.data(payload))
 
         resp = requests.delete(
             url,
@@ -339,9 +392,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("delete_user", resp)
 
@@ -359,9 +416,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("delete_user_access_key", resp)
 
@@ -378,9 +439,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("detach_role_policy", resp)
 
@@ -397,9 +462,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("detach_user_group", resp)
 
@@ -416,9 +485,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("detach_user_policy", resp)
 
@@ -434,9 +507,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("get_group", resp)["data"]
 
@@ -452,9 +529,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("get_policy", resp)["data"]
 
@@ -470,9 +551,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("get_role", resp)["data"]
 
@@ -488,9 +573,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("get_service", resp)["data"]
 
@@ -506,9 +595,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("get_user", resp)["data"]
 
@@ -525,7 +618,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -534,9 +627,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_attached_user_groups", resp)
 
@@ -555,7 +652,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -564,9 +661,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_attached_role_policies", resp)
 
@@ -583,7 +684,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -592,9 +693,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_attached_user_policies", resp)
 
@@ -611,7 +716,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -620,9 +725,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_group_policies", resp)
 
@@ -639,7 +748,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -648,9 +757,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_group_users", resp)
 
@@ -666,7 +779,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -675,9 +788,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_policies", resp)
 
@@ -693,7 +810,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -702,9 +819,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_roles", resp)
 
@@ -720,7 +841,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -729,9 +850,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_services", resp)
 
@@ -747,7 +872,7 @@ class IAM:
             "page[number]": page,
             "page[size]": size,
         }
-        logger.debug(f"query parameters: {args}")
+        logger.debug("query parameters: %s", args)
 
         resp = requests.get(
             url,
@@ -756,9 +881,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("list_users", resp)
 
@@ -771,7 +900,7 @@ class IAM:
         payload = {
             "description": description,
         }
-        logger.debug(f"payload: {payload}")
+        logger.debug("payload: %s", self._redactor.data(payload))
 
         resp = requests.put(
             url,
@@ -780,9 +909,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("update_group", resp)
 
@@ -800,7 +933,7 @@ class IAM:
             "engineVersion": "2023-09-18",
             "statements": policies_statements,
         }
-        logger.debug(f"payload: {payload}")
+        logger.debug("payload: %s", self._redactor.data(payload))
 
         resp = requests.put(
             url,
@@ -809,9 +942,13 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("update_policy", resp)
 
@@ -836,7 +973,7 @@ class IAM:
             "trustPolicy": trust_policy,
             "trustPolicyEngineVersion": "2023-09-18",
         }
-        logger.debug(f"payload: {payload}")
+        logger.debug("payload: %s", self._redactor.data(payload))
 
         resp = requests.put(
             url,
@@ -845,8 +982,12 @@ class IAM:
             verify=self._client.get_validate_ssl(),
         )
 
-        logger.debug("Header response: %s %s", resp.status_code, resp.headers)
+        logger.debug(
+            "Header response: %s %s",
+            resp.status_code,
+            self._redactor.data(resp.headers),
+        )
         logger.debug("Body response:")
-        logger.debug(resp.text)
+        logger.debug("%s", self._redactor.text(resp.text))
 
         return self._client.validate_api_response("update_role", resp)
