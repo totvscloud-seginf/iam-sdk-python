@@ -50,12 +50,14 @@ To see the real values while troubleshooting, pass
 never use it in production.
 
 To keep an audit trail of *who* performed each action without exposing the
-token, enable `log_caller_identity=True` (or
-`IAM_SDK_LOG_CALLER_IDENTITY=true`), which logs the identity claims of the
-token at INFO:
+token, the SDK logs the identity claims of the token at INFO (enabled by
+default):
 
 ```
 INFO:iam_sdk.api:login requested by: {'username': 'userapi', 'email': 'luser@totvs.com.br', 'tenant': 'cseinf', ...}
 ```
+
+Those claims may carry personal data, so pass `log_caller_identity=False` or
+export `IAM_SDK_LOG_CALLER_IDENTITY=false` to turn the trail off.
 
 See [docs/example.md](docs/example.md) for details.

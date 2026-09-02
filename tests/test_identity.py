@@ -99,12 +99,10 @@ class TestCallerIdentityLogging(unittest.TestCase):
         )
 
     @patch("iam_sdk.api.requests.post", mock_post_login_jwt)
-    def test_login_logs_who_authenticated(self):
+    def test_login_logs_who_authenticated_by_default(self):
         with patch.dict(os.environ, {}, clear=True):
             client = iam_sdk.client(
-                api_access_key="userapi",
-                api_secret_key="secret",
-                log_caller_identity=True,
+                api_access_key="userapi", api_secret_key="secret"
             )
             with self.assertLogs("iam_sdk.api", level="INFO") as logs:
                 client.login()
@@ -116,10 +114,12 @@ class TestCallerIdentityLogging(unittest.TestCase):
         self.assertNotIn(TOKEN, output)
 
     @patch("iam_sdk.api.requests.post", mock_post_login_jwt)
-    def test_disabled_by_default(self):
+    def test_can_be_turned_off_by_argument(self):
         with patch.dict(os.environ, {}, clear=True):
             client = iam_sdk.client(
-                api_access_key="userapi", api_secret_key="secret"
+                api_access_key="userapi",
+                api_secret_key="secret",
+                log_caller_identity=False,
             )
             with self.assertLogs("iam_sdk.api", level="DEBUG") as logs:
                 client.login()
@@ -129,10 +129,24 @@ class TestCallerIdentityLogging(unittest.TestCase):
         self.assertNotIn("luser@totvs.com.br", output)
 
     @patch("iam_sdk.api.requests.post", mock_post_login_jwt)
-    def test_enabled_by_env_var(self):
-        with patch.dict(os.environ, {LOG_CALLER_IDENTITY_ENV: "true"}):
+    def test_can_be_turned_off_by_env_var(self):
+        for value in ("false", "0", "no", "off"):
+            with patch.dict(os.environ, {LOG_CALLER_IDENTITY_ENV: value}):
+                client = iam_sdk.client(
+                    api_access_key="userapi", api_secret_key="secret"
+                )
+                with self.assertLogs("iam_sdk.api", level="DEBUG") as logs:
+                    client.login()
+
+            self.assertNotIn("requested by", "\n".join(logs.output), value)
+
+    @patch("iam_sdk.api.requests.post", mock_post_login_jwt)
+    def test_argument_wins_over_env_var(self):
+        with patch.dict(os.environ, {LOG_CALLER_IDENTITY_ENV: "false"}):
             client = iam_sdk.client(
-                api_access_key="userapi", api_secret_key="secret"
+                api_access_key="userapi",
+                api_secret_key="secret",
+                log_caller_identity=True,
             )
             with self.assertLogs("iam_sdk.api", level="INFO") as logs:
                 client.login()

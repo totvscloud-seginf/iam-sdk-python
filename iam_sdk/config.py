@@ -9,17 +9,31 @@ AUTHZ_ENDPOINT = "http://localhost:8180/v1"
 CP_ENDPOINT = "http://localhost:443/v1"
 
 _TRUTHY = ("1", "true", "yes", "on")
+_FALSY = ("0", "false", "no", "off")
 
 
-def resolve_flag(value: Optional[bool], env_name: str) -> bool:
-    """Resolve a boolean option: explicit argument first, env var as fallback.
+def resolve_flag(
+    value: Optional[bool], env_name: str, default: bool = False
+) -> bool:
+    """Resolve a boolean option: explicit argument first, env var, then default.
 
-    None (the factory default) means "not provided" by the SDK user.
+    None (the factory default) means "not provided" by the SDK user, so the
+    environment variable decides - in both directions, which is what lets an
+    option that is enabled by default still be turned off without touching
+    the code. An unset or unrecognized value falls back to ``default``.
     """
     if value is not None:
         return bool(value)
 
-    return os.getenv(env_name, "").strip().lower() in _TRUTHY
+    env_value = os.getenv(env_name, "").strip().lower()
+
+    if env_value in _TRUTHY:
+        return True
+
+    if env_value in _FALSY:
+        return False
+
+    return default
 
 
 def _parse_endpoint_list(value) -> List[str]:
@@ -71,10 +85,10 @@ class Config:
         self.unsafe_debug_logging = resolve_flag(
             kargs.get("unsafe_debug_logging"), UNSAFE_DEBUG_LOGGING_ENV
         )
-        # When enabled, the identity claims of the token (never the token
+        # On by default: the identity claims of the token (never the token
         # itself) are logged, so the logs record who performed each action.
         self.log_caller_identity = resolve_flag(
-            kargs.get("log_caller_identity"), LOG_CALLER_IDENTITY_ENV
+            kargs.get("log_caller_identity"), LOG_CALLER_IDENTITY_ENV, default=True
         )
 
     def get_unsafe_debug_logging(self) -> bool:

@@ -85,13 +85,13 @@ request data on their own.
 
 Since the tokens are redacted, the logs no longer say who is behind a request.
 `log_caller_identity` restores that trail without exposing the token: only the
-`ext` identity claims of the JWT are logged, at INFO level.
+`ext` identity claims of the JWT are logged, at INFO level. It is **enabled by
+default**.
 
 ```python
 client = iam_sdk.client(
     api_access_key=username,
     api_secret_key=password,
-    log_caller_identity=True,
 )
 
 client.login()
@@ -103,19 +103,23 @@ INFO:iam_sdk.api:is_authorized Service::Nostromos::Action::"CreateDatabase2" on 
 '''
 ```
 
-It can also be enabled through the environment:
-
-```sh
-export IAM_SDK_LOG_CALLER_IDENTITY=true
-```
-
 The identity is logged wherever a new identity enters the SDK: `login()`,
 `assume_role()` (the session token) and `is_authorized*()` (the **caller**
 token forwarded in `ContextCallerForward`, which changes on every request).
 The `iam.*` control plane calls reuse the session token already logged at
 login, so they do not repeat it.
 
-It is opt-in because those claims may carry personal data such as the e-mail.
+Those claims may carry personal data such as the e-mail, so if your log
+pipeline must not receive it, turn the trail off with
+`log_caller_identity=False` or through the environment:
+
+```sh
+export IAM_SDK_LOG_CALLER_IDENTITY=false
+```
+
+The explicit argument wins over the environment variable, and the variable
+works in both directions (`true`/`1`/`yes`/`on` and `false`/`0`/`no`/`off`).
+
 The claims are decoded from the JWT payload **without verifying the
 signature** - they are good enough for a log line, but never use them to take
 an authorization decision; use `client.validate_token()` for that.
