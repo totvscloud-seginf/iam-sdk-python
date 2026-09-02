@@ -24,5 +24,8 @@ class ClientRepository(ABC):
     def get_validate_ssl(self) -> bool:
         raise NotImplementedError("get_validate_ssl not implemented")
 
+    def get_redactor(self) -> Any:
+        raise NotImplementedError("get_redactor not implemented")
+
     def validate_api_response(self, api_name: str, resp_http: Any) -> Any:
         raise NotImplementedError("validate_api_response not implemented")

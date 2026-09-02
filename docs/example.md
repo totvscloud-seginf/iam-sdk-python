@@ -32,6 +32,98 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6IjkyZDA0ZTk4LTgxMTEtNGZkMi04M2IxLTNiNThkYTI1NDhjNyIs
 
 ```
 
+### Debug logging and credential redaction
+
+The SDK never writes credentials to the logs. Passwords, access/refresh
+tokens, `Authorization` headers and the forwarded `x-token-jwt` are replaced
+by `***REDACTED***` before the DEBUG record is emitted, while the rest of the
+request/response stays readable:
+
+```python
+logging.getLogger().setLevel(logging.DEBUG)
+
+client = iam_sdk.client(api_access_key=username, api_secret_key=password)
+client.login()
+
+'''
+DEBUG:iam_sdk.api:Body request: {'username': 'fcd1e1c8...', 'password': '***REDACTED***'}
+DEBUG:iam_sdk.api:Header response: 200 {'content-type': 'application/json'}
+DEBUG:iam_sdk.api:Body response:
+DEBUG:iam_sdk.api:{"data": {"access_token": "***REDACTED***", "expires_in": 3599, "token_type": "bearer"}, "error": false, "message": "success"}
+'''
+```
+
+To troubleshoot a request with the real values, enable `unsafe_debug_logging`.
+It logs a warning because the secrets then reach the logs in plaintext -
+**never enable it in production**:
+
+```python
+client = iam_sdk.client(
+    api_access_key=username,
+    api_secret_key=password,
+    unsafe_debug_logging=True,
+)
+
+'''
+WARNING:iam_sdk.redact:IAM_SDK_UNSAFE_DEBUG_LOGGING is ENABLED: credentials, tokens and authorization headers will be written to the debug logs in PLAINTEXT. Never enable it in production.
+DEBUG:iam_sdk.api:Body request: {'username': 'fcd1e1c8...', 'password': 'dd16b129...'}
+'''
+```
+
+The same can be done without touching the code, through the environment:
+
+```sh
+export IAM_SDK_UNSAFE_DEBUG_LOGGING=true
+```
+
+The explicit `unsafe_debug_logging` argument takes precedence over the
+environment variable. Note that this only covers the SDK's own logs - if you
+enable DEBUG for `urllib3`/`requests` as well, those libraries may log
+request data on their own.
+
+### Audit trail: who performed the action
+
+Since the tokens are redacted, the logs no longer say who is behind a request.
+`log_caller_identity` restores that trail without exposing the token: only the
+`ext` identity claims of the JWT are logged, at INFO level. It is **enabled by
+default**.
+
+```python
+client = iam_sdk.client(
+    api_access_key=username,
+    api_secret_key=password,
+)
+
+client.login()
+client.is_authorized_to_call_action(caller=caller_context, action=action, resource=resource)
+
+'''
+INFO:iam_sdk.api:login requested by: {'username': 'userapi', 'email': 'luser@totvs.com.br', 'tenant': 'cseinf', 'principal': 'trn::tcloud::iam::::cseinf::user::"userapi"', 'mfa': 'active'}
+INFO:iam_sdk.api:is_authorized Service::Nostromos::Action::"CreateDatabase2" on Database::"Mysql" requested by: {'username': 'userapi', 'email': 'luser@totvs.com.br', ...}
+'''
+```
+
+The identity is logged wherever a new identity enters the SDK: `login()`,
+`assume_role()` (the session token) and `is_authorized*()` (the **caller**
+token forwarded in `ContextCallerForward`, which changes on every request).
+The `iam.*` control plane calls reuse the session token already logged at
+login, so they do not repeat it.
+
+Those claims may carry personal data such as the e-mail, so if your log
+pipeline must not receive it, turn the trail off with
+`log_caller_identity=False` or through the environment:
+
+```sh
+export IAM_SDK_LOG_CALLER_IDENTITY=false
+```
+
+The explicit argument wins over the environment variable, and the variable
+works in both directions (`true`/`1`/`yes`/`on` and `false`/`0`/`no`/`off`).
+
+The claims are decoded from the JWT payload **without verifying the
+signature** - they are good enough for a log line, but never use them to take
+an authorization decision; use `client.validate_token()` for that.
+
 ### Validate token
 
 ```python
