@@ -81,6 +81,45 @@ environment variable. Note that this only covers the SDK's own logs - if you
 enable DEBUG for `urllib3`/`requests` as well, those libraries may log
 request data on their own.
 
+### Audit trail: who performed the action
+
+Since the tokens are redacted, the logs no longer say who is behind a request.
+`log_caller_identity` restores that trail without exposing the token: only the
+`ext` identity claims of the JWT are logged, at INFO level.
+
+```python
+client = iam_sdk.client(
+    api_access_key=username,
+    api_secret_key=password,
+    log_caller_identity=True,
+)
+
+client.login()
+client.is_authorized_to_call_action(caller=caller_context, action=action, resource=resource)
+
+'''
+INFO:iam_sdk.api:login requested by: {'username': 'userapi', 'email': 'luser@totvs.com.br', 'tenant': 'cseinf', 'principal': 'trn::tcloud::iam::::cseinf::user::"userapi"', 'mfa': 'active'}
+INFO:iam_sdk.api:is_authorized Service::Nostromos::Action::"CreateDatabase2" on Database::"Mysql" requested by: {'username': 'userapi', 'email': 'luser@totvs.com.br', ...}
+'''
+```
+
+It can also be enabled through the environment:
+
+```sh
+export IAM_SDK_LOG_CALLER_IDENTITY=true
+```
+
+The identity is logged wherever a new identity enters the SDK: `login()`,
+`assume_role()` (the session token) and `is_authorized*()` (the **caller**
+token forwarded in `ContextCallerForward`, which changes on every request).
+The `iam.*` control plane calls reuse the session token already logged at
+login, so they do not repeat it.
+
+It is opt-in because those claims may carry personal data such as the e-mail.
+The claims are decoded from the JWT payload **without verifying the
+signature** - they are good enough for a log line, but never use them to take
+an authorization decision; use `client.validate_token()` for that.
+
 ### Validate token
 
 ```python

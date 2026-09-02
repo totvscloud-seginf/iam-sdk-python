@@ -47,4 +47,15 @@ DEBUG:iam_sdk.api:Body request: {'username': 'fcd1e1c8...', 'password': '***REDA
 To see the real values while troubleshooting, pass
 `unsafe_debug_logging=True` to `iam_sdk.client()` or export
 `IAM_SDK_UNSAFE_DEBUG_LOGGING=true`. A warning is logged when it is enabled -
-never use it in production. See [docs/example.md](docs/example.md) for details.
+never use it in production.
+
+To keep an audit trail of *who* performed each action without exposing the
+token, enable `log_caller_identity=True` (or
+`IAM_SDK_LOG_CALLER_IDENTITY=true`), which logs the identity claims of the
+token at INFO:
+
+```
+INFO:iam_sdk.api:login requested by: {'username': 'userapi', 'email': 'luser@totvs.com.br', 'tenant': 'cseinf', ...}
+```
+
+See [docs/example.md](docs/example.md) for details.

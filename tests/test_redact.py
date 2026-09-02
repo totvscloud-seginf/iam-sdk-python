@@ -6,13 +6,13 @@ from unittest.mock import patch
 from tests.patches import api as patch_api
 
 import iam_sdk
+from iam_sdk.config import resolve_flag
 from iam_sdk.redact import (
     REDACTED,
     UNSAFE_DEBUG_LOGGING_ENV,
     Redactor,
     redact_data,
     redact_text,
-    resolve_unsafe_debug_logging,
 )
 
 JWT = (
@@ -141,22 +141,22 @@ class TestRedactor(unittest.TestCase):
 class TestUnsafeFlagResolution(unittest.TestCase):
     def test_defaults_to_false(self):
         with patch.dict(os.environ, {}, clear=True):
-            self.assertFalse(resolve_unsafe_debug_logging(None))
+            self.assertFalse(resolve_flag(None, UNSAFE_DEBUG_LOGGING_ENV))
 
     def test_env_var_enables_it(self):
         for value in ("1", "true", "TRUE", "yes", "on"):
             with patch.dict(os.environ, {UNSAFE_DEBUG_LOGGING_ENV: value}):
-                self.assertTrue(resolve_unsafe_debug_logging(None), value)
+                self.assertTrue(resolve_flag(None, UNSAFE_DEBUG_LOGGING_ENV), value)
 
         with patch.dict(os.environ, {UNSAFE_DEBUG_LOGGING_ENV: "no"}):
-            self.assertFalse(resolve_unsafe_debug_logging(None))
+            self.assertFalse(resolve_flag(None, UNSAFE_DEBUG_LOGGING_ENV))
 
     def test_explicit_argument_wins_over_env_var(self):
         with patch.dict(os.environ, {UNSAFE_DEBUG_LOGGING_ENV: "true"}):
-            self.assertFalse(resolve_unsafe_debug_logging(False))
+            self.assertFalse(resolve_flag(False, UNSAFE_DEBUG_LOGGING_ENV))
 
         with patch.dict(os.environ, {}, clear=True):
-            self.assertTrue(resolve_unsafe_debug_logging(True))
+            self.assertTrue(resolve_flag(True, UNSAFE_DEBUG_LOGGING_ENV))
 
 
 class TestClientDebugLogging(unittest.TestCase):

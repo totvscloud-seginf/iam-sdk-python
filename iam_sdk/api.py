@@ -9,6 +9,7 @@ from .exceptions import (
     NotAuthorizedException,
 )
 from .context import ContextCallerForward
+from .identity import token_ext_claims
 from .redact import Redactor
 from .services.iam import IAM
 from .domain.client_repository import ClientRepository, LogLevel
@@ -28,6 +29,7 @@ class Client(ClientRepository):
         self._log_level: LogLevel = "INFO"
         self._timeout = kargs.get("timeout", 30)
         self._redactor = Redactor(self.config.get_unsafe_debug_logging())
+        self._log_caller_identity = self.config.get_log_caller_identity()
 
     @property
     def iam(self):
@@ -51,6 +53,22 @@ class Client(ClientRepository):
 
     def get_redactor(self) -> Redactor:
         return self._redactor
+
+    def _log_identity(self, token: str, message: str, *args: Any) -> None:
+        """Log who is behind ``token``, from its ``ext`` identity claims.
+
+        The token itself is never logged. No-op unless ``log_caller_identity``
+        is enabled, since the claims may carry personal data (e.g. e-mail).
+        """
+        if not self._log_caller_identity:
+            return
+
+        ext = token_ext_claims(token)
+        if not ext:
+            logger.debug("no identity claims to log for: %s", message)
+            return
+
+        logger.info(message + " requested by: %s", *args, self._redactor.data(ext))
 
     def set_log_level(
         self,
@@ -109,6 +127,8 @@ class Client(ClientRepository):
         self._token = data["access_token"]
         self._expires_in = data["expires_in"]
 
+        self._log_identity(self._token, "login")
+
         return self
 
     def assume_role(self, role_name="", tenant="", service="", region=""):
@@ -158,6 +178,10 @@ class Client(ClientRepository):
 
         self._token = data["access_token"]
         self._expires_in = data["expires_in"]
+
+        self._log_identity(
+            self._token, "assume role %s on tenant %s", role_name, tenant
+        )
 
         return self
 
@@ -262,6 +286,12 @@ class Client(ClientRepository):
         logger.debug("validating the context parameters")
         caller.validate()
         headers_forward = caller.mount_header()
+
+        # the caller token is the identity actually performing the action,
+        # and it changes on every request - unlike the session token
+        self._log_identity(
+            caller.caller_token_jwt, "is_authorized %s on %s", action, resource
+        )
 
         # merge headers
         headers = {**headers, **headers_forward}

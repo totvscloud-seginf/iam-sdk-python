@@ -12,18 +12,15 @@ obvious that secrets are being written to the logs in plaintext.
 
 import json
 import logging
-import os
 import re
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 REDACTED = "***REDACTED***"
 
 UNSAFE_DEBUG_LOGGING_ENV = "IAM_SDK_UNSAFE_DEBUG_LOGGING"
-
-_TRUTHY = ("1", "true", "yes", "on")
 
 # Keys whose value is a credential / token. The comparison normalizes the key
 # to lowercase without "-" and "_", so "x-token-jwt", "X_Token_JWT" and
@@ -33,6 +30,7 @@ SENSITIVE_KEYS = frozenset(
         "apikey",
         "apisecretkey",
         "accesskey",
+        "accesssecretkey",
         "accesstoken",
         "authorization",
         "clientsecret",
@@ -57,14 +55,6 @@ SENSITIVE_KEYS = frozenset(
 # header values, error messages, ...).
 _JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*")
 _BEARER_RE = re.compile(r"\b(bearer)\s+\S+", re.IGNORECASE)
-
-
-def resolve_unsafe_debug_logging(value: Optional[bool] = None) -> bool:
-    """Resolve the unsafe flag: explicit argument first, env var as fallback."""
-    if value is not None:
-        return bool(value)
-
-    return os.getenv(UNSAFE_DEBUG_LOGGING_ENV, "").strip().lower() in _TRUTHY
 
 
 def _normalize_key(key: Any) -> str:

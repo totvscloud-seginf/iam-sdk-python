@@ -1,11 +1,25 @@
 import os
-from typing import List
+from typing import List, Optional
 
-from .redact import resolve_unsafe_debug_logging
+from .identity import LOG_CALLER_IDENTITY_ENV
+from .redact import UNSAFE_DEBUG_LOGGING_ENV
 
 AUTHN_ENDPOINT = "http://localhost:9000/api"
 AUTHZ_ENDPOINT = "http://localhost:8180/v1"
 CP_ENDPOINT = "http://localhost:443/v1"
+
+_TRUTHY = ("1", "true", "yes", "on")
+
+
+def resolve_flag(value: Optional[bool], env_name: str) -> bool:
+    """Resolve a boolean option: explicit argument first, env var as fallback.
+
+    None (the factory default) means "not provided" by the SDK user.
+    """
+    if value is not None:
+        return bool(value)
+
+    return os.getenv(env_name, "").strip().lower() in _TRUTHY
 
 
 def _parse_endpoint_list(value) -> List[str]:
@@ -54,14 +68,20 @@ class Config:
             fallbacks = os.getenv("IAM_AUTHZ_FALLBACK_ENDPOINTS", "")
         self.endpoint_authz_fallbacks = _parse_endpoint_list(fallbacks)
         # When enabled, the debug logs show credentials/tokens in plaintext.
-        # None (the factory default) means "not provided", so we fall back to
-        # the environment variable.
-        self.unsafe_debug_logging = resolve_unsafe_debug_logging(
-            kargs.get("unsafe_debug_logging")
+        self.unsafe_debug_logging = resolve_flag(
+            kargs.get("unsafe_debug_logging"), UNSAFE_DEBUG_LOGGING_ENV
+        )
+        # When enabled, the identity claims of the token (never the token
+        # itself) are logged, so the logs record who performed each action.
+        self.log_caller_identity = resolve_flag(
+            kargs.get("log_caller_identity"), LOG_CALLER_IDENTITY_ENV
         )
 
     def get_unsafe_debug_logging(self) -> bool:
         return self.unsafe_debug_logging
+
+    def get_log_caller_identity(self) -> bool:
+        return self.log_caller_identity
 
     def get_endpoint_cp(self):
         return self.endpoint_cp
