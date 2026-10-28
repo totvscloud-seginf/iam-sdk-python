@@ -16,10 +16,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
       - name: Install Poetry
-        run: pip install poetry
+        run: pip install "poetry==2.4.2"
       - name: Install venv
         run: |
           poetry lock
           poetry install
       - name: Test
         run: poetry run python -m unittest tests/test_*.py
+      - name: Build
+        run: poetry build

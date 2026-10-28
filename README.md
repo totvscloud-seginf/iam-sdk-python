@@ -10,11 +10,40 @@ $ python -m venv .venv
 $ . .venv/bin/activate
 ```
 
-Then, you can install boto3 from PyPI with:
+Then, install the SDK from the GitHub repository (pin a release tag, e.g. `0.5.0`, tags have no `v` prefix):
 
 ```sh
-$ python -m pip install iam-sdk-python
+# pip
+$ python -m pip install "iam-sdk-python @ git+https://github.com/totvscloud-seginf/iam-sdk-python.git@0.5.0"
+
+# uv
+$ uv add "iam-sdk-python @ git+https://github.com/totvscloud-seginf/iam-sdk-python.git@0.5.0"
 ```
+
+In `pyproject.toml` (PEP 621):
+
+```toml
+dependencies = [
+    "iam-sdk-python @ git+https://github.com/totvscloud-seginf/iam-sdk-python.git@0.5.0",
+]
+```
+
+With Poetry:
+
+```toml
+iam-sdk-python = { git = "https://github.com/totvscloud-seginf/iam-sdk-python.git", tag = "0.5.0" }
+```
+
+Wheels and sdists are also attached to each GitHub Release, and can be installed
+directly from the asset URL:
+
+```sh
+$ python -m pip install https://github.com/totvscloud-seginf/iam-sdk-python/releases/download/0.5.0/iam_sdk_python-0.5.0-py3-none-any.whl
+```
+
+> **Note:** new versions are no longer published to PyPI. Replace any
+> `iam-sdk-python>=x.y` requirement that resolves from PyPI with one of the
+> GitHub references above, otherwise you will stay on the last PyPI release.
 
 
 ## Using the SDK
