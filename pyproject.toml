@@ -1,6 +1,7 @@
 [project]
 name = "iam-sdk-python"
 requires-python = ">=3.9"
+dynamic = ["version"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -13,7 +14,7 @@ classifiers = [
 
 [tool.poetry]
 name = "iam-sdk-python"
-version = "0.5.0"
+version = "0.5.1"
 description = "SDK for IAM "
 authors = []
 readme = "README.md"
