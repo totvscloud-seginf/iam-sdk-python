@@ -1,19 +1,32 @@
-name: Publish to PyPI
+name: Publish to GitHub Release
 on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
-  pypi_release:
-    name: Builds Using Poetry and Publishes to PyPI
+  github_release:
+    name: Builds Using Poetry and Attaches Artifacts to the GitHub Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.12"
       - name: Install Poetry
-        run: curl -sSL https://install.python-poetry.org | python
-      - name: Add Poetry to path
-        run: echo "${HOME}/.poetry/bin" >> $GITHUB_PATH
-      - run: poetry config pypi-token.pypi "${{ secrets.PYPI_API_KEY }}"
-      - name: Publish package
-        run: poetry publish --build
+        run: pip install "poetry==2.4.2"
+      - name: Check tag matches package version
+        run: |
+          version="$(poetry version -s)"
+          if [ "${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} must match pyproject version ${version} (no 'v' prefix)"
+            exit 1
+          fi
+      - name: Build package
+        run: poetry build
+      - name: Upload wheel and sdist to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/*

@@ -17,7 +17,7 @@ permissions:
 jobs:
   dependency_track:
     name: Deploy artifact to Dependency Track
-    uses: totvscloud-seginf/shared-workflows/.github/workflows/dependency-track.yml@v1.2.16
+    uses: totvscloud-seginf/shared-workflows/.github/workflows/dependency-track.yml@v1.9.11
     secrets:
       dtrack_x_api_key: ${{ secrets.DTRACK_X_API_KEY_PROD }}
     with:
